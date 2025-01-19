@@ -1,6 +1,7 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
@@ -9,7 +10,6 @@ from sklearn.metrics import (
 )
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.feature_extraction.text import TfidfVectorizer
-from gensim.models import Word2Vec
 import numpy as np
 import nltk
 from nltk.corpus import stopwords
@@ -37,33 +37,11 @@ def preprocess_text(text):
     tokens = nltk.word_tokenize(text)
     # Remove stopwords
     stop_words = set(stopwords.words("english"))
-    tokens = [word for word in tokens if word.isalnum() and word not in stop_words]
+    tokens = [word for word in tokens if word.isalnum() and word not in stop_words])
     # Lemmatization
     lemmatizer = WordNetLemmatizer()
     tokens = [lemmatizer.lemmatize(word) for word in tokens]
     return tokens
-
-
-# Generate word embeddings
-def generate_embeddings(sentences, vector_size=100, window=5, min_count=1):
-    model = Word2Vec(
-        sentences,
-        vector_size=vector_size,
-        window=window,
-        min_count=min_count,
-        workers=4,
-    )
-    return model
-
-
-# Transform text to embedding vectors
-def text_to_embedding(text, model, vector_size):
-    vectors = [model.wv[word] for word in text if word in model.wv]
-    if len(vectors) > 0:
-        return np.mean(vectors, axis=0)
-    else:
-        return np.zeros(vector_size)
-
 
 # Generate BERT embeddings
 def bert_embeddings(texts, tokenizer, model):
@@ -80,7 +58,7 @@ def bert_embeddings(texts, tokenizer, model):
 
 
 # Load dataset
-dataset_path = "\\train\\track_a\\eng.csv"
+dataset_path = "/content/eng.csv"
 data = load_data(dataset_path)
 
 # Preprocess text
@@ -130,6 +108,12 @@ print("Training Random Forest model on BERT embeddings...")
 rf_bert_model = RandomForestClassifier(n_estimators=100, random_state=42)
 rf_bert_model.fit(train_bert_vectors, train_labels)
 
+mlp_bert_model = MLPClassifier(hidden_layer_sizes=(256, 128), max_iter=500, random_state=42)
+mlp_bert_model.fit(train_bert_vectors, train_labels)
+
+mlp_tfidf_model = MLPClassifier(hidden_layer_sizes=(256, 128), max_iter=500, random_state=42)
+mlp_tfidf_model.fit(train_tfidf_vectors, train_labels)
+
 
 # Evaluate model
 def evaluate_model(model, X_val, y_val, approach):
@@ -143,5 +127,8 @@ def evaluate_model(model, X_val, y_val, approach):
 
 # Evaluate
 print("Evaluating models...")
-evaluate_model(rf_tfidf_model, val_tfidf_vectors, val_labels, "TF-IDF")
-evaluate_model(rf_bert_model, val_bert_vectors, val_labels, "BERT")
+evaluate_model(rf_tfidf_model, val_tfidf_vectors, val_labels, "RF - TF-IDF")
+evaluate_model(rf_bert_model, val_bert_vectors, val_labels, "RF - BERT")
+evaluate_model(mlp_bert_model, val_bert_vectors, val_labels, "MLP - BERT")
+evaluate_model(mlp_tfidf_model, val_tfidf_vectors, val_labels, "MLP - TF-IDF")
+
